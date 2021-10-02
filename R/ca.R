@@ -141,7 +141,6 @@
 #' CA <- ca(fm = fm, data = mortgage, var = "black", method = "logit",
 #' cl = "diff", t = t, b = 50, bc = TRUE)
 #' @importFrom boot boot
-#' @importFrom rlist list.cbind
 #' @importFrom Hmisc wtd.quantile wtd.mean
 #' @importFrom stats quantile rexp qnorm pnorm
 #' @importFrom dummies dummy.data.frame
@@ -167,6 +166,7 @@ ca <- function(fm, data, method = c("ols", "logit", "probit", "QR"),
   }
   # ----- Replace Null Weight Specification
   if (is.null(samp_weight)) samp_weight <- rep(1, dim(data)[1])
+  samp_weight <- samp_weight/mean(samp_weight) # renormalize
   # ----- Matching Arguments
   method <- match.arg(method)
   var_type <- match.arg(var_type)
@@ -390,9 +390,9 @@ ca <- function(fm, data, method = c("ols", "logit", "probit", "QR"),
     index <- lengths(cdf_bundle)
     # Reshape
     H <- lapply(cdf_bundle, matrix, nrow = 1)
-    H <- list.cbind(H) # estimates of weighted cdf
+    H <- list_cbind(H) # estimates of weighted cdf
     trimtails <- lapply(trimtails, matrix, nrow = 1)
-    trimtails <- list.cbind(trimtails) # long vector of trimtail logics
+    trimtails <- list_cbind(trimtails) # long vector of trimtail logics
   }
   #  ----- 4. The Bootstrap Statistics Function
   # set a bootstrap counting variable for the purpose of showing a progress bar
@@ -549,7 +549,7 @@ ca <- function(fm, data, method = c("ols", "logit", "probit", "QR"),
       index <- lengths(cdf_bundle)
       # Reshape
       H <- lapply(cdf_bundle, matrix, nrow = 1)
-      H <- unlist(list.cbind(H)) # estimates of weighted cdf
+      H <- unlist(list_cbind(H)) # estimates of weighted cdf
     }
     out <- H
   }
@@ -746,7 +746,7 @@ ca <- function(fm, data, method = c("ols", "logit", "probit", "QR"),
     }
     A <- lapply(A, assign)
     A <- lapply(A, matrix, nrow = 1)
-    A <- list.cbind(A)
+    A <- list_cbind(A)
     colnames(Zc) <- A
     # The following function outputs a bundle of bias-corrected estimate, u
     # pper and lower bound for both groups for a variable in interest
@@ -799,7 +799,7 @@ ca <- function(fm, data, method = c("ols", "logit", "probit", "QR"),
   }
 }
 
-# ------ Two Auxiliary Functions
+# ------ Three Auxiliary Functions
 # 1. Function to obtain empirical p-values
 epvals <- function(z, zs){
   return(mean(zs > z))
@@ -810,6 +810,12 @@ wcdf <- function(y, x, w){
   Ff <- weighted.mean((x <= y), w)
   return(Ff)
 }
+# 3. A function that combines columns in a list
+tempf <- function(.data, fun, ...) {
+  do.call(what = fun, args = as.list(.data), ...)
+}
+list_cbind <- function(.data) tempf(.data, "cbind")
+
 # ----- Summary (Moments of specified variables in interest for least/most
 # affected groups) ------
 #' Return the output of \code{\link{ca}} function.
